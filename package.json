@@ -1,0 +1,115 @@
+{
+  "name": "solana-historical-hub",
+  "version": "1.0.0",
+  "description": "x402-powered pay-per-query API gateway for Solana's full-history archive via Old Faithful",
+  "main": "src/app.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "test": "jest --coverage --verbose",
+    "test:watch": "jest --watch",
+    "test:unit": "jest --testPathPattern=tests/unit",
+    "test:e2e": "jest --testPathPattern=tests/e2e",
+    "lint": "eslint src/ tests/ examples/",
+    "lint:fix": "eslint src/ tests/ examples/ --fix",
+    "example:client": "node examples/client.js",
+    "example:agent": "node examples/agent.js",
+    "vercel-build": "echo 'Build complete'",
+    "prepare": "node -e \"console.log('Run: cp .env.example .env and configure your environment variables')\""
+  },
+  "keywords": [
+    "solana",
+    "x402",
+    "old-faithful",
+    "http-402",
+    "micropayments",
+    "usdc",
+    "rpc",
+    "archive",
+    "historical-data",
+    "agent-economy",
+    "hackathon"
+  ],
+  "author": "Solana Historical Hub Team",
+  "license": "MIT",
+  "dependencies": {
+    "@solana/web3.js": "^1.95.0",
+    "axios": "^1.7.0",
+    "buffer": "^6.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "express": "^4.19.0",
+    "express-rate-limit": "^7.2.0",
+    "helmet": "^8.1.0",
+    "ioredis": "^5.8.2",
+    "joi": "^18.0.1",
+    "prom-client": "^15.1.3",
+    "uuid": "^9.0.1",
+    "winston": "^3.13.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.12.0",
+    "eslint": "^8.57.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.29.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^30.2.0",
+    "jsdom": "^27.1.0",
+    "nodemon": "^3.1.0",
+    "supertest": "^6.3.4"
+  },
+  "optionalDependencies": {
+    "@faremeter/fetch": "^1.0.0",
+    "@faremeter/payment-solana": "^1.0.0",
+    "@langchain/openai": "^0.2.0",
+    "langchain": "^0.2.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "coverageDirectory": "coverage",
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/app.js"
+    ],
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 60,
+        "functions": 75,
+        "lines": 70,
+        "statements": 70
+      }
+    },
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.js"
+    ],
+    "testTimeout": 10000
+  },
+  "nodemonConfig": {
+    "watch": [
+      "src"
+    ],
+    "ext": "js,json",
+    "ignore": [
+      "tests/",
+      "node_modules/"
+    ],
+    "exec": "node src/app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RedaRahmani/solana-historical-hub.git"
+  },
+  "bugs": {
+    "url": "https://github.com/RedaRahmani/solana-historical-hub/issues"
+  },
+  "homepage": "https://github.com/RedaRahmani/solana-historical-hub#readme"
+}

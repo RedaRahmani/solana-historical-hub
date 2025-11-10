@@ -1,0 +1,19 @@
+{
+  "name": "examples",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Example scripts for Solana Historical Hub",
+  "scripts": {
+    "client": "node client.js",
+    "agent": "node agent.js"
+  },
+  "dependencies": {
+    "@langchain/core": "^0.2.0",
+    "@langchain/openai": "^0.2.0",
+    "@solana/spl-token": "^0.4.0",
+    "@solana/web3.js": "^1.95.0",
+    "axios": "^1.7.0",
+    "dotenv": "^16.4.0",
+    "langchain": "^0.2.0"
+  }
+}
