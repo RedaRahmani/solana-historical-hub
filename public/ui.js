@@ -414,6 +414,59 @@
     document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') UI.closePaymentModal(); });
   }
 
+  // Method hints and param templates (devnet-safe)
+  UI.initMethodHints = function initMethodHints(){
+    const select = document.getElementById('method');
+    const help = document.getElementById('methodHelp');
+    const params = document.getElementById('params');
+    if (!select || !help || !params) return;
+
+    const META = {
+      getBlock: {
+        tip: 'getBlock: Historical block data',
+        example: '[419899999, {"encoding":"json", "maxSupportedTransactionVersion": 0}]'
+      },
+      getBlockHeight: { tip: 'getBlockHeight: Latest block height', example: '[]' },
+      getBalance: {
+        tip: 'getBalance: Balance for an address',
+        example: '["11111111111111111111111111111111", {"commitment":"confirmed"}]'
+      },
+      getTransaction: {
+        tip: 'getTransaction: Fetch transaction by signature',
+        example: '["5j7s...signature", {"maxSupportedTransactionVersion":0}]'
+      },
+      getSignaturesForAddress: { tip: 'getSignaturesForAddress: Recent signatures for address', example: '["11111111111111111111111111111111", {"limit": 10}]' },
+      getTokenAccountsByOwner: {
+        tip: 'getTokenAccountsByOwner: Token accounts owned by wallet',
+        example: '["Fht...ownerPubkey", {"programId":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"}, {"encoding":"jsonParsed"}]'
+      },
+      getTokenAccountBalance: { tip: 'getTokenAccountBalance: SPL token account balance', example: '["9xQeWvG816bUx9EPfS2G9UaT6QxG7GSMcRjG7V9fJUSC"]' },
+      getProgramAccounts: {
+        tip: 'getProgramAccounts: Scan accounts owned by program (use filters)',
+        example: '["TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", {"encoding":"jsonParsed", "filters":[{"dataSize":165}]}]'
+      },
+      getAccountInfo: { tip: 'getAccountInfo: Single account info by pubkey', example: '["11111111111111111111111111111111", {"encoding":"base64"}]' },
+      getMultipleAccounts: { tip: 'getMultipleAccounts: Batch account infos', example: '[["11111111111111111111111111111111","SysvarRent111111111111111111111111111111111"], {"encoding":"base64"}]' },
+      getLatestBlockhash: { tip: 'getLatestBlockhash: Latest blockhash for transactions', example: '[]' },
+      getSlot: { tip: 'getSlot: Current slot', example: '[]' },
+      getVersion: { tip: 'getVersion: RPC node version', example: '[]' },
+      getConfirmedSignaturesForAddress2: { tip: 'getConfirmedSignaturesForAddress2: Legacy signatures (deprecated)', example: '["11111111111111111111111111111111", {"limit": 20}]' },
+      getTokenLargestAccounts: { tip: 'getTokenLargestAccounts: Largest token holders for a mint', example: '["4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"]' },
+      getInflationReward: { tip: 'getInflationReward: Inflation rewards for addresses (optional epoch)', example: '[["11111111111111111111111111111111"], {"epoch": 500}]' },
+    };
+
+    function apply(value, isInitial){
+      const meta = META[value] || { tip: '', example: '[]' };
+      help.textContent = meta.tip || '';
+      // Only auto-fill if user hasn't typed or we set it previously
+      const shouldAutofill = isInitial || params.dataset.autofilled === 'true' || params.value.trim() === '';
+      if (shouldAutofill) { params.value = meta.example; params.dataset.autofilled = 'true'; }
+    }
+
+    select.addEventListener('change', () => apply(select.value, false));
+    apply(select.value, true);
+  };
+
   UI.copyResult = async function copyResult(){
     try {
       const r = document.getElementById('queryResult');
@@ -456,7 +509,7 @@
   }
 
   function init(){
-    try { UI.initTheme(); ensureConnection(); bindEvents(); initWallet(); UI.initLazy(); } catch(_){}
+    try { UI.initTheme(); ensureConnection(); bindEvents(); initWallet(); UI.initLazy(); UI.initMethodHints(); } catch(_){}
   }
 
   if (hasWindow) {

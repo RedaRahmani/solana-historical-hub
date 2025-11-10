@@ -141,12 +141,24 @@ function uiHandler(req, res) {
             <div>
               <label for="method" class="block text-sm font-medium">Method</label>
               <select id="method" name="method" class="w-full mt-1 rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 text-slate-800 dark:text-slate-100" aria-describedby="methodHelp">
-                <option value="getBlock" title="getBlock: Historical block data">getBlock</option>
-                <option value="getBlockHeight" title="getBlockHeight: Latest block height">getBlockHeight</option>
-                <option value="getTransaction" title="getTransaction: Fetch transaction by signature">getTransaction</option>
-                <option value="getBalance" title="getBalance: Balance for an address">getBalance</option>
+                <option value="getBlock" title="getBlock: Historical block data" data-example='[419899999, {"encoding":"json", "maxSupportedTransactionVersion": 0}]'>getBlock</option>
+                <option value="getBlockHeight" title="getBlockHeight: Latest block height" data-example='[]'>getBlockHeight</option>
+                <option value="getBalance" title="getBalance: Balance for an address" data-example='["11111111111111111111111111111111", {"commitment":"confirmed"}]'>getBalance</option>
+                <option value="getTransaction" title="getTransaction: Fetch transaction by signature" data-example='["5j7s...signature", {"maxSupportedTransactionVersion":0}]'>getTransaction</option>
+                <option value="getSignaturesForAddress" title="getSignaturesForAddress: Recent signatures for address" data-example='["11111111111111111111111111111111", {"limit": 10}]'>getSignaturesForAddress</option>
+                <option value="getTokenAccountsByOwner" title="getTokenAccountsByOwner: Token accounts owned by wallet" data-example='["Fht...ownerPubkey", {"programId":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"}, {"encoding":"jsonParsed"}]'>getTokenAccountsByOwner</option>
+                <option value="getTokenAccountBalance" title="getTokenAccountBalance: SPL token account balance" data-example='["9xQeWvG816bUx9EPfS2G9UaT6QxG7GSMcRjG7V9fJUSC"]'>getTokenAccountBalance</option>
+                <option value="getProgramAccounts" title="getProgramAccounts: Scan accounts owned by a program (use filters)" data-example='["TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", {"encoding":"jsonParsed", "filters":[{"dataSize":165}]}]'>getProgramAccounts</option>
+                <option value="getAccountInfo" title="getAccountInfo: Single account info by pubkey" data-example='["11111111111111111111111111111111", {"encoding":"base64"}]'>getAccountInfo</option>
+                <option value="getMultipleAccounts" title="getMultipleAccounts: Batch account infos" data-example='[["11111111111111111111111111111111","SysvarRent111111111111111111111111111111111"], {"encoding":"base64"}]'>getMultipleAccounts</option>
+                <option value="getLatestBlockhash" title="getLatestBlockhash: Latest blockhash for transactions" data-example='[]'>getLatestBlockhash</option>
+                <option value="getSlot" title="getSlot: Current slot" data-example='[]'>getSlot</option>
+                <option value="getVersion" title="getVersion: RPC node version" data-example='[]'>getVersion</option>
+                <option value="getConfirmedSignaturesForAddress2" title="getConfirmedSignaturesForAddress2: Legacy signatures list (deprecated)" data-example='["11111111111111111111111111111111", {"limit": 20}]'>getConfirmedSignaturesForAddress2</option>
+                <option value="getTokenLargestAccounts" title="getTokenLargestAccounts: Largest token holders for a mint" data-example='["4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"]'>getTokenLargestAccounts</option>
+                <option value="getInflationReward" title="getInflationReward: Inflation rewards for addresses (optional epoch)" data-example='[["11111111111111111111111111111111"], {"epoch": 500}]'>getInflationReward</option>
               </select>
-              <p id="methodHelp" class="text-xs text-slate-500 mt-1">e.g., getBlock: Historical block data</p>
+              <p id="methodHelp" class="text-xs text-slate-500 mt-1">Tip: Select a method to see parameter template and description.</p>
             </div>
             <div class="md:col-span-2">
               <label for="params" class="block text-sm font-medium">Parameters (JSON array)</label>
