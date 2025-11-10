@@ -121,6 +121,9 @@
     const modal = document.getElementById('paymentModal'); if (modal) modal.classList.remove('modal--show');
     const pp = document.getElementById('paymentProgress'); if (pp) pp.classList.add('hidden');
     const btn = document.getElementById('payButton'); if (btn){ btn.disabled=false; btn.textContent='Pay with Phantom'; }
+    if (state.pendingRequest && state.pendingRequest._context === 'agent' && state.agentAwaitingPayment) {
+      UI.onAgentPaymentCancelled();
+    }
     state.pendingPayment = null; state.pendingRequest = null;
   };
 
@@ -130,7 +133,16 @@
       const proof = w.btoa(JSON.stringify({ txSignature, paymentId }));
       const response = await w.fetch('/', { method:'POST', headers:{ 'Content-Type':'application/json', 'X-Payment': proof }, body: JSON.stringify({ jsonrpc:'2.0', id:1, method: state.pendingRequest.method, params: state.pendingRequest.params }) });
       const data = await response.json();
-      if (response.ok){ UI.renderResult(data); UI.closePaymentModal(); try { w.confetti && w.confetti({ particleCount: 120, spread: 70, origin: { y: 0.7 } }); } catch(_){} }
+      if (response.ok){
+        if (state.pendingRequest && state.pendingRequest._context === 'agent') {
+          state.agentAwaitingPayment = false;
+          UI.onAgentPaid(data);
+          try { w.confetti && w.confetti({ particleCount: 120, spread: 70, origin: { y: 0.7 } }); } catch(_){}
+        } else {
+          UI.renderResult(data);
+        }
+        UI.closePaymentModal();
+      }
       else { UI.renderError(data); toast('Request error after payment', 'error'); }
     } catch(e){ UI.renderError({ error: { message: 'Retry failed: ' + e.message } }); toast('Retry failed: '+e.message, 'error'); }
   };
@@ -305,39 +317,101 @@
     UI.renderProviders(copy);
   };
 
-  // Agent simulator
+  // Agent simulator (real x402 flow)
   UI.runAgent = async function runAgent(){
-    const q = (document.getElementById('agentInput')||{}).value || 'Analyze: slot 419899999';
-    const depth = parseInt((document.getElementById('agentDepth')||{}).value || '2');
+    const q = (document.getElementById('agentInput')||{}).value || '';
     const stepsEl = document.getElementById('agentSteps');
     const spin = document.getElementById('agentSpin');
     const outWrap = document.getElementById('agentResult');
-    const out = document.getElementById('agentOutput');
+    const sigTableBody = document.querySelector('#agentSigTable tbody');
     if (spin) spin.classList.remove('hidden');
     if (stepsEl) stepsEl.innerHTML = '';
-    const steps = [
-      'Parse query and detect entities',
-      'Fetch historical data (devnet-safe)',
-      'Aggregate and compute metrics',
-      'Summarize and format output'
-    ].slice(0, Math.max(2, depth+1));
-    for (let i=0;i<steps.length;i++){
+    if (sigTableBody) sigTableBody.innerHTML = '';
+    if (outWrap) outWrap.classList.add('hidden');
+
+    state.agentRunning = true;
+    state.agentAwaitingPayment = false;
+
+    const addStep = (text, done=false) => {
       const row = document.createElement('div');
       row.className = 'flex items-center gap-2 text-sm';
-      row.innerHTML = '<span class="spinner" style="border-color:#6366f180;border-top-color:#6366f1"></span><span>'+steps[i]+'</span>';
+      if (!done) row.innerHTML = '<span class="spinner" style="border-color:#6366f180;border-top-color:#6366f1"></span><span>'+text+'</span>';
+      else row.textContent = '✅ ' + text;
       stepsEl.appendChild(row);
-      // simulate work
-      /* eslint-disable no-await-in-loop */
-      await new Promise((r)=> setTimeout(r, 300 + i*200));
-      row.firstChild.remove();
-      row.innerHTML = '✅ ' + steps[i];
+      return row;
+    };
+
+    const s1 = addStep('Planning...');
+    // Parse: naive extract address and limit from text
+    const addrMatch = q.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/);
+    const limitMatch = q.match(/(last|limit)\s+(\d{1,3})/i);
+    const address = addrMatch ? addrMatch[0] : '11111111111111111111111111111111';
+    const limit = limitMatch ? Math.min(100, parseInt(limitMatch[2], 10)) : 10;
+    s1.textContent = '✅ Planning: address ' + address.slice(0,6) + '…, limit ' + limit;
+
+    const s2 = addStep('Choosing provider');
+    s2.textContent = '✅ Provider: Triton Old Faithful (devnet)';
+
+    addStep('Executing primary request');
+    try {
+      const method = 'getSignaturesForAddress';
+      const params = [address, { limit }];
+      const response = await w.fetch('/', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ jsonrpc:'2.0', id:1, method, params }) });
+      const data = await response.json();
+      if (response.status === 402){
+        addStep('Payment required', true).textContent = '⚠️ Payment required';
+        state.agentAwaitingPayment = true;
+        UI.openPaymentModal(data, method, params);
+        try { if (state.pendingRequest) state.pendingRequest._context = 'agent'; } catch(_){}
+        if (spin) spin.classList.add('hidden');
+        return; // Continue in retryWithPayment after payment
+      }
+      if (!response.ok) throw new Error((data && data.error && data.error.message) || 'Request failed');
+      UI.onAgentPaid(data);
+    } catch(e){
+      if (spin) spin.classList.add('hidden');
+      const row = addStep('Payment required to run agent', true);
+      row.textContent = '❌ Payment required to run agent';
+      toast('Payment required to run agent', 'error');
     }
-    if (spin) spin.classList.add('hidden');
-    if (out) {
-      out.textContent = JSON.stringify({ query: q, depth, estimatedCostUSDC: (0.001*depth).toFixed(4), result: 'This is a simulated agent output for demonstration. Devnet-safe.' }, null, 2);
-      if (outWrap) outWrap.classList.remove('hidden');
-    }
-    try { w.confetti && w.confetti({ particleCount: 80, spread: 60, origin: { y: 0.8 } }); } catch(_){}
+  };
+
+  UI.onAgentPaid = function onAgentPaid(data){
+    const spin = document.getElementById('agentSpin');
+    const outWrap = document.getElementById('agentResult');
+    const stepsEl = document.getElementById('agentSteps');
+    const body = document.querySelector('#agentSigTable tbody');
+    try { if (spin) spin.classList.add('hidden'); } catch(_){}
+    if (!data || !data.result) { toast('No data returned', 'error'); return; }
+    const list = Array.isArray(data.result) ? data.result : (data.result.value || []);
+    if (body) body.innerHTML = '';
+    list.slice(0, 50).forEach((it)=>{
+      const sig = it.signature || it.signatures || it;
+      const slot = it.slot || '-';
+      const status = it.err ? 'error' : (it.confirmationStatus || 'ok');
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td class="px-3 py-2">' + (typeof sig === 'string' ? sig.slice(0,12)+'…' : '-') + '</td>'
+        + '<td class="px-3 py-2">' + slot + '</td>'
+        + '<td class="px-3 py-2">' + status + '</td>';
+      body.appendChild(tr);
+    });
+    if (outWrap) outWrap.classList.remove('hidden');
+    const done = document.createElement('div');
+    done.className = 'text-sm text-emerald-600';
+    done.textContent = '✅ Completed with real data';
+    stepsEl.appendChild(done);
+    state.agentRunning = false;
+  };
+
+  UI.onAgentPaymentCancelled = function onAgentPaymentCancelled(){
+    if (!state.agentRunning || !state.agentAwaitingPayment) return;
+    state.agentAwaitingPayment = false;
+    const stepsEl = document.getElementById('agentSteps');
+    const row = document.createElement('div');
+    row.className = 'text-sm text-red-600';
+    row.textContent = '❌ Payment required to run agent';
+    stepsEl.appendChild(row);
+    toast('Payment required to run agent', 'error');
   };
 
   // Query form

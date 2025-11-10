@@ -272,7 +272,19 @@ function uiHandler(req, res) {
         <div id="agentResult" class="mt-3 hidden">
           <details class="rounded-xl shadow-lg p-4 border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900">
             <summary class="cursor-pointer text-sm font-semibold">Agent Output</summary>
-            <pre id="agentOutput" class="mt-2 whitespace-pre-wrap text-xs"></pre>
+            <div id="agentResultsWrap" class="mt-2 overflow-x-auto">
+              <table id="agentSigTable" class="w-full text-sm text-slate-800 dark:text-slate-100">
+                <thead class="border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th class="px-3 py-2 text-left">Signature</th>
+                    <th class="px-3 py-2 text-left">Slot</th>
+                    <th class="px-3 py-2 text-left">Status</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <pre id="agentOutput" class="mt-2 whitespace-pre-wrap text-xs hidden"></pre>
           </details>
         </div>
       </section>
