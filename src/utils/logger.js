@@ -33,8 +33,14 @@ const logger = winston.createLogger({
   ],
 });
 
-// Add file transport in production
-if (process.env.NODE_ENV === 'production') {
+// Add file transport in production only when running on a writable filesystem.
+// Serverless platforms such as Vercel do not provide a writable project directory,
+// and attempting to create files/directories will crash the function (ENOENT).
+// Detect Vercel or other serverless environments via VERCEL or NOW environment vars
+// and skip file transports there. If you want file logs on a server, run with
+// NODE_ENV=production on a traditional server (not Vercel).
+const isServerless = Boolean(process.env.VERCEL || process.env.NOW || process.env.FUNCTIONS_EXTERNAL_BINDING);
+if (process.env.NODE_ENV === 'production' && !isServerless) {
   logger.add(
     new winston.transports.File({
       filename: 'logs/error.log',
@@ -50,6 +56,9 @@ if (process.env.NODE_ENV === 'production') {
       maxFiles: 5,
     })
   );
+} else if (isServerless) {
+  // In serverless environments prefer console-only logging (already present).
+  logger.warn('Running in serverless environment: file logging disabled');
 }
 
 module.exports = logger;
