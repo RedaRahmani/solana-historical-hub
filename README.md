@@ -801,6 +801,23 @@ Implement split payments using:
 
 ---
 
+## 🚀 One-command Demo
+
+```bash
+git clone https://github.com/yourname/solana-historical-hub
+cd solana-historical-hub
+docker compose up --build
+# open the UI in your browser
+open http://localhost:3000/ui  # macOS
+# xdg-open http://localhost:3000/ui  # Linux
+```
+
+- Connect Phantom (devnet)
+- Run the Agent Simulator → Payment modal appears (≈0.0008–0.0030 USDC)
+- Approve payment → real signatures table and data populate
+
+---
+
 ## 🖥️ Interactive Web UI
 
 Visit `/ui` for a progressively enhanced UI:
@@ -814,6 +831,29 @@ Quick demo:
 - Connect Phantom (devnet). Choose `getBlock` with params: `[419899999, {"encoding": "json", "maxSupportedTransactionVersion": 0}]`
 - Click Execute. On 402, modal opens with stepper (Connecting → Signing → Confirming → Retrying)
 - Approve in Phantom. On success, confetti appears, JSON result fades in, and a transactions table becomes available
+
+---
+
+## 🧰 CLI (Global)
+
+Install globally and run paid queries from your terminal. The install runs a small postinstall to ensure CLI deps are present globally.
+
+```bash
+npm install -g .
+
+# Query recent signatures for an address (handles 402 + payment)
+solana-history query getSignaturesForAddress 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU --limit 10 --api http://localhost:3000
+
+# Agent-style flow (parses prompt → runs paid query)
+solana-history agent "Analyze address 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU in last 10 slots" --api http://localhost:3000
+
+# Metrics
+solana-history metrics --api http://localhost:3000
+```
+
+Notes:
+- The CLI stores a devnet wallet at `~/.solana-history/wallet.json`. Fund with devnet SOL + USDC.
+- Override gateway with `--api <url>` or `API_URL` env var.
 
 ---
 

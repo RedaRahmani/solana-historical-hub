@@ -317,7 +317,9 @@ async function main() {
       if (result.transactions && result.transactions.length > 0) {
         log(`\n  Sample Transaction Details:`, 'yellow');
         const tx = result.transactions[0];
-        log(`    Signature: ${tx.transaction?.signatures?.[0] || 'N/A'}`, 'yellow');
+        const sig0 = tx.transaction?.signatures?.[0] || 'N/A';
+        const link = sig0 && sig0 !== 'N/A' ? `https://explorer.solana.com/tx/${sig0}?cluster=devnet` : '';
+        log(`    Signature: ${sig0}${link ? `  (${link})` : ''}`, 'yellow');
         log(`    Fee: ${tx.meta?.fee || 0} lamports`, 'yellow');
         log(`    Success: ${tx.meta?.err === null ? 'Yes' : 'No'}`, 'yellow');
       }

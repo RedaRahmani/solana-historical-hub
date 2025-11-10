@@ -227,11 +227,15 @@
       const txs = (data && data.result && (data.result.transactions || data.result)) || [];
       if (!Array.isArray(txs) || txs.length === 0) { wrap.classList.add('hidden'); return; }
       txs.slice(0, 200).forEach((t)=>{
-        const sig = t.transaction && t.transaction.signatures ? t.transaction.signatures[0] : (t.signature || 'n/a');
+        const sig = t.transaction && t.transaction.signatures ? t.transaction.signatures[0] : (t.signature || '');
         const status = (t.meta && t.meta.err) ? 'error' : 'ok';
         const fee = t.meta && typeof t.meta.fee === 'number' ? t.meta.fee : 0;
+        const href = sig ? ('https://explorer.solana.com/tx/' + sig + '?cluster=devnet') : '';
         const tr = document.createElement('tr');
-        tr.innerHTML = '<td class="px-3 py-2">' + (sig ? (sig.slice(0,10)+'...') : '-') + '</td>'
+        const sigCell = sig
+          ? '<a class="text-indigo-600 dark:text-indigo-300 underline break-all" target="_blank" rel="noopener" href="'+href+'">Signature: ' + sig + '</a>'
+          : '-';
+        tr.innerHTML = '<td class="px-3 py-2">' + sigCell + '</td>'
           + '<td class="px-3 py-2">' + status + '</td>'
           + '<td class="px-3 py-2">' + fee + '</td>';
         body.appendChild(tr);
@@ -389,8 +393,12 @@
       const sig = it.signature || it.signatures || it;
       const slot = it.slot || '-';
       const status = it.err ? 'error' : (it.confirmationStatus || 'ok');
+      const href = typeof sig === 'string' ? ('https://explorer.solana.com/tx/' + sig + '?cluster=devnet') : '';
       const tr = document.createElement('tr');
-      tr.innerHTML = '<td class="px-3 py-2">' + (typeof sig === 'string' ? sig.slice(0,12)+'…' : '-') + '</td>'
+      const sigCell = typeof sig === 'string'
+        ? '<a class="text-indigo-600 dark:text-indigo-300 underline break-all" target="_blank" rel="noopener" href="'+href+'">Signature: ' + sig + '</a>'
+        : '-';
+      tr.innerHTML = '<td class="px-3 py-2">' + sigCell + '</td>'
         + '<td class="px-3 py-2">' + slot + '</td>'
         + '<td class="px-3 py-2">' + status + '</td>';
       body.appendChild(tr);
