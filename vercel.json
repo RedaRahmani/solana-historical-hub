@@ -1,18 +1,20 @@
 {
   "version": 2,
   "builds": [
-    {
-      "src": "src/app.js",
-      "use": "@vercel/node"
-    }
+    { "src": "src/app.js", "use": "@vercel/node" }
   ],
   "routes": [
+    { "src": "/(.*)", "dest": "src/app.js" }
+  ],
+  "headers": [
     {
-      "src": "/(.*)",
-      "dest": "src/app.js"
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Headers", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,OPTIONS" }
+      ]
     }
   ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  "env": { "NODE_ENV": "production" }
 }

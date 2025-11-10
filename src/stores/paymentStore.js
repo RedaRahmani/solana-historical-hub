@@ -23,8 +23,15 @@ class PaymentStore {
    * Initialize Redis connection with automatic fallback
    */
   async initRedis() {
-    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-    
+    const redisUrl = process.env.REDIS_URL || '';
+    // Skip Redis entirely on serverless or when local/empty is detected
+    if (process.env.SKIP_REDIS === '1' || !redisUrl || /localhost|127\.0\.0\.1/i.test(redisUrl)) {
+      logger.info('PaymentStore: Redis disabled (using in-memory store)');
+      this.useRedis = false;
+      this.redis = null;
+      return;
+    }
+
     try {
       this.redis = new Redis(redisUrl, {
         retryStrategy: (times) => {

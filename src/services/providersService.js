@@ -6,7 +6,7 @@ const providers = [
   {
     id: 'triton-old-faithful',
     name: 'Triton Old Faithful (Premium)',
-    url: process.env.OLD_FAITHFUL_RPC_URL || 'https://rlock-solanad-de21.devnet.rpcpool.com/ba715b75-838e-4fc8-b4d7-5e518c00032a',
+    url: process.env.OLD_FAITHFUL_RPC_URL || 'https://rlock-solanad-de21.devnet.rpcpool.com/ba715b75-838e-4fc8-b2d7-5e518c00032a',
     type: 'premium',
     pricing: 1.0, // Base multiplier
     reputation: 100, // 0-100 score

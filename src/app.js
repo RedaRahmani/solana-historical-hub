@@ -14,6 +14,39 @@ const { uiHandler } = require('./handlers/uiHandler');
 const { validateRpcRequest, validatePaymentHeader, validateProvider } = require('./middleware/validation');
 const logger = require('./utils/logger');
 
+// --- Environment hardening for serverless (Vercel) ---
+function normalizeEnv() {
+  // Force remote RPC if localhost is detected
+  const rpc = process.env.SOLANA_RPC_URL;
+  if (!rpc || /localhost|127\.0\.0\.1/i.test(rpc)) {
+    process.env.SOLANA_RPC_URL = 'https://api.devnet.solana.com';
+  }
+
+  // Provide a safe default Old Faithful remote if none configured
+  if (!process.env.OLD_FAITHFUL_RPC_URL || /localhost|127\.0\.0\.1/i.test(process.env.OLD_FAITHFUL_RPC_URL)) {
+    process.env.OLD_FAITHFUL_RPC_URL = 'https://rlock-solanad-de21.devnet.rpcpool.com/ba715b75-838e-4fc8-b2d7-5e518c00032a';
+  }
+
+  // Disable Redis on serverless when local/empty
+  const redisUrl = process.env.REDIS_URL || '';
+  if (!redisUrl || /localhost|127\.0\.0\.1/i.test(redisUrl)) {
+    process.env.SKIP_REDIS = '1';
+  }
+
+  // Validate critical vars
+  const missing = [];
+  if (!process.env.USDC_MINT) missing.push('USDC_MINT');
+  if (!process.env.PAYMENT_WALLET_ADDRESS) missing.push('PAYMENT_WALLET_ADDRESS');
+  if (missing.length) {
+    console.warn(`[config] Missing ${missing.join(', ')} — payments may not function. Set these in Vercel env.`);
+  }
+  console.info(`[config] RPC = ${process.env.SOLANA_RPC_URL}`);
+  console.info(`[config] OLD_FAITHFUL_RPC_URL = ${process.env.OLD_FAITHFUL_RPC_URL}`);
+  console.info(`[config] Redis = ${process.env.SKIP_REDIS === '1' ? 'disabled' : (process.env.REDIS_URL || 'disabled')}`);
+}
+
+normalizeEnv();
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
