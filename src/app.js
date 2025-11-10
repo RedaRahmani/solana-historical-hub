@@ -26,6 +26,8 @@ app.use(helmet({
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '1mb' })); // Limit payload size
+// Serve static UI assets
+app.use(express.static('public'));
 
 // Rate limiting: 100 requests per minute per IP
 const limiter = rateLimit({

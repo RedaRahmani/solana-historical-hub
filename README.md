@@ -801,6 +801,22 @@ Implement split payments using:
 
 ---
 
+## 🖥️ Interactive Web UI
+
+Visit `/ui` for a progressively enhanced UI:
+- Responsive layout with dark/light mode toggle
+- Toasts for errors/success, subtle animations, accessible modal
+- Charts (requests over time, revenue split) and sortable provider table
+- Agent Simulator for showcasing an agent-like flow (devnet-safe)
+
+Quick demo:
+- Start server: `npm start` and open `http://localhost:3000/ui`
+- Connect Phantom (devnet). Choose `getBlock` with params: `[419899999, {"encoding": "json", "maxSupportedTransactionVersion": 0}]`
+- Click Execute. On 402, modal opens with stepper (Connecting → Signing → Confirming → Retrying)
+- Approve in Phantom. On success, confetti appears, JSON result fades in, and a transactions table becomes available
+
+---
+
 ## 🏆 Hackathon Alignment
 
 ### Bounty: Best x402 Integration with Old Faithful ($2,500)

@@ -2,7 +2,9 @@ const { getRevenueMetrics } = require('../services/paymentService');
 const { paymentStore } = require('../stores/paymentStore');
 
 /**
- * Serve the main UI page (stable, minimal UI without external UI libs)
+ * Serve the main UI page with progressive enhancement.
+ * - Uses Tailwind CDN, Chart.js, Toastify, and canvas-confetti when available.
+ * - Degrades gracefully to basic HTML/CSS if any CDN fails.
  */
 function uiHandler(req, res) {
   const html = `
@@ -11,7 +13,32 @@ function uiHandler(req, res) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Solana Historical Hub - Web Interface</title>
+  <title>Solana Historical Hub — Web Interface</title>
+
+  <!-- Tailwind CSS (CDN) with dark mode support; gracefully degrades if blocked -->
+  <script>
+    window.tailwind = { config: { darkMode: 'class' } };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="preconnect" href="https://unpkg.com" />
+
+  <!-- Toastify (toasts) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+  <!-- Chart.js (charts) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Canvas confetti (success effects) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- Lucide icons (optional) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
+
+  <!-- Custom UI styles (small overrides) -->
+  <link rel="stylesheet" href="/ui.css" />
+  <!-- Prism.js for JSON syntax highlighting (optional) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js"></script>
 
   <!-- Buffer polyfill for browser (required by Solana libraries) -->
   <script>
@@ -69,290 +96,221 @@ function uiHandler(req, res) {
   </script>
 
   <style>
-    * { box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; background: #f3f4f6; margin: 0; padding: 20px; }
-    .container { max-width: 1100px; margin: 0 auto; }
-    .header, .card { background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 6px 14px rgba(0,0,0,.08); margin-bottom: 16px; }
-    .header h1 { margin: 0 0 6px; color: #4f46e5; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
-    label { display: block; margin: 8px 0 4px; font-weight: 600; }
-    select, textarea, input { width: 100%; padding: 10px; border: 2px solid #e5e7eb; border-radius: 6px; font-family: monospace; }
-    button { background: #4f46e5; color: #fff; border: 0; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
-    button:hover { background: #4338ca; }
-    .btn-secondary { background: #6b7280; }
-    .btn-secondary:hover { background: #4b5563; }
-    .result { margin-top: 10px; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; white-space: pre-wrap; font-family: monospace; max-height: 420px; overflow: auto; }
-    .loading { text-align: center; padding: 16px; color: #4f46e5; }
-    .provider-card { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; margin-bottom: 8px; }
-    /* Modal */
+    /* Small CSS augmentations for progressive enhancement */
+    .visually-hidden { position: absolute !important; height: 1px; width: 1px; overflow: hidden; clip: rect(1px, 1px, 1px, 1px); white-space: nowrap; }
+    .card { /* Tailwind utilities inlined via CDN at runtime */ }
+    .badge { /* via Tailwind classes */ }
+    .btn-primary { /* via Tailwind classes */ }
+    .btn-secondary { /* via Tailwind classes */ }
+    .btn-ghost { /* via Tailwind classes */ }
     .modal { display:none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 1000; }
-    .modal-content { width: 92%; max-width: 520px; margin: 6% auto; background:#fff; border-radius: 10px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,.25); }
-    .modal-header { display:flex; align-items:center; justify-content: space-between; margin-bottom: 8px; }
-    .close { cursor: pointer; font-size: 20px; }
-    .payment-details { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; margin: 10px 0; }
-    .row { display:flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e5e7eb; }
-    .row:last-child { border-bottom: 0; }
+    .modal--show { display:block; }
+    .modal-content { width: 92%; max-width: 560px; margin: 5% auto; }
+    .step { display:flex; align-items:center; gap:8px; font-size: 0.9rem; }
+    .step-dot { height:8px; width:8px; border-radius:9999px; background: #cbd5e1; }
+    .step--active .step-dot { background: #6366f1; }
+    .spinner { display:inline-block; height:20px; width:20px; border-radius:9999px; border:2px solid rgba(255,255,255,0.6); border-top-color:#fff; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>🏛️ Solana Historical Hub</h1>
-      <p>Pay-per-query RPC gateway (x402) • Devnet</p>
-      <div id="walletStatus" style="margin-top:8px; padding:8px; background:#fff3cd; border-radius:6px;">
-        <span id="walletText">🦊 Wallet: Not connected</span>
-        <button id="connectWallet" onclick="connectWallet()" style="margin-left:8px;">Connect Phantom</button>
+<body class="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-slate-900 dark:to-slate-950 min-h-screen text-slate-800 dark:text-slate-100">
+  <div class="max-w-7xl mx-auto px-4 py-6">
+    <header class="rounded-xl shadow-lg p-5 border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between gap-3">
+      <div>
+        <h1 class="text-2xl font-bold text-indigo-700 dark:text-indigo-300">Solana Historical Hub</h1>
+        <p class="text-slate-600 dark:text-slate-300 text-sm">x402-powered, pay-per-query archive gateway (Devnet-safe)</p>
       </div>
-    </div>
+      <div class="flex items-center gap-2">
+        <button id="themeToggle" class="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition" aria-label="Toggle dark mode">🌓</button>
+        <div id="walletStatus" class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300" aria-live="polite">
+          <span id="walletText">Wallet: Not connected</span>
+        </div>
+        <button id="connectWallet" class="inline-flex items-center justify-center rounded-lg bg-indigo-600 text-white px-4 py-2 font-semibold shadow hover:bg-indigo-500 active:scale-[.98] transition">Connect Phantom</button>
+      </div>
+    </header>
 
-    <div class="grid">
-      <div class="card">
-        <h2>📡 RPC Query</h2>
-        <form id="queryForm">
-          <label for="method">RPC Method</label>
-          <select id="method" name="method">
-            <option value="getSlot">getSlot</option>
-            <option value="getBlockHeight">getBlockHeight</option>
-            <option value="getBlock" selected>getBlock</option>
-            <option value="getTransaction">getTransaction</option>
-            <option value="getSignaturesForAddress">getSignaturesForAddress</option>
-          </select>
-          <label for="params">Parameters (JSON array)</label>
-          <textarea id="params" rows="4">[419899999, {"encoding": "json", "maxSupportedTransactionVersion": 0}]</textarea>
-          <div style="margin-top:8px; display:flex; gap:8px;">
-            <button type="submit" id="runBtn">Execute Query</button>
-            <button type="button" class="btn-secondary" onclick="clearResult()">Clear</button>
+    <main class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <!-- Query + Result -->
+      <section class="rounded-xl shadow-lg p-5 border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900 xl:col-span-2">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-semibold">🔎 JSON-RPC Query</h2>
+          <span class="text-xs text-slate-500">Tooltips describe methods</span>
+        </div>
+        <form id="queryForm" class="mt-3 space-y-3" aria-label="JSON-RPC Query Form">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label for="method" class="block text-sm font-medium">Method</label>
+              <select id="method" name="method" class="w-full mt-1 rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 text-slate-800 dark:text-slate-100" aria-describedby="methodHelp">
+                <option value="getBlock" title="getBlock: Historical block data">getBlock</option>
+                <option value="getBlockHeight" title="getBlockHeight: Latest block height">getBlockHeight</option>
+                <option value="getTransaction" title="getTransaction: Fetch transaction by signature">getTransaction</option>
+                <option value="getBalance" title="getBalance: Balance for an address">getBalance</option>
+              </select>
+              <p id="methodHelp" class="text-xs text-slate-500 mt-1">e.g., getBlock: Historical block data</p>
+            </div>
+            <div class="md:col-span-2">
+              <label for="params" class="block text-sm font-medium">Parameters (JSON array)</label>
+              <textarea id="params" rows="4" class="w-full mt-1 rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 font-mono text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400">[419899999, {"encoding": "json", "maxSupportedTransactionVersion": 0}]</textarea>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button type="submit" id="runBtn" class="inline-flex items-center justify-center rounded-lg bg-indigo-600 text-white px-4 py-2 font-semibold shadow hover:bg-indigo-500 active:scale-[.98] transition">
+              <span class="inline-flex items-center gap-2">🚀 Execute</span>
+            </button>
+            <button type="button" id="clearBtn" class="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition">Clear</button>
           </div>
         </form>
-        <div id="queryResult" class="result"></div>
-      </div>
 
-      <div class="card">
-        <h2>📊 Metrics</h2>
-        <div id="metrics"><div class="loading">Loading metrics...</div></div>
-        <div style="margin-top:8px;"><button class="btn-secondary" onclick="loadMetrics()">Refresh</button></div>
-      </div>
+        <div id="resultContainer" class="mt-4">
+          <div id="queryLoading" class="hidden items-center gap-2 text-indigo-600"><span class="spinner"></span> <span>Loading...</span></div>
+          <div id="resultJson" class="hidden">
+            <details id="resultDetails" open class="rounded-xl shadow-lg p-4 border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <summary class="cursor-pointer text-sm font-semibold text-slate-800 dark:text-slate-100">JSON Result</summary>
+              <div class="flex items-center justify-end gap-2 mt-2">
+                <button id="resultToggleBtn" type="button" class="px-2 py-1 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xs">Collapse</button>
+                <button id="copyResultBtn" type="button" class="px-2 py-1 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 transition text-xs">Copy JSON</button>
+              </div>
+              <div id="resultLoading" class="hidden mt-2 text-indigo-600 flex items-center gap-2"><span class="spinner" style="border-color:#6366f180;border-top-color:#6366f1"></span> <span>Loading result...</span></div>
+              <div class="result-container mt-2">
+                <pre id="queryResult" class="language-json text-xs"></pre>
+              </div>
+            </details>
+          </div>
+          <div id="txTableWrap" class="hidden rounded-xl shadow-lg p-4 border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900 mt-3">
+            <div class="flex items-center justify-between">
+              <h3 class="font-semibold">Transactions</h3>
+              <button id="sortTxBtn" class="px-3 py-1 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xs">Sort by Fee</button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm text-slate-800 dark:text-slate-100" aria-label="Transactions Table">
+                <thead class="border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th class="px-3 py-2 text-left">Signature</th>
+                    <th class="px-3 py-2 text-left">Status</th>
+                    <th class="px-3 py-2 text-left">Fee</th>
+                  </tr>
+                </thead>
+                <tbody id="txTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      <div class="card">
-        <h2>🌐 Data Providers</h2>
-        <div id="providers"><div class="loading">Loading providers...</div></div>
-        <div style="margin-top:8px;"><button class="btn-secondary" onclick="loadProviders()">Refresh</button></div>
-      </div>
-    </div>
+      <!-- Metrics + Providers -->
+      <section class="space-y-4">
+        <div class="rounded-xl shadow-lg p-5 border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold">📊 Metrics</h2>
+            <button id="refreshMetrics" class="px-3 py-1 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xs">Refresh</button>
+          </div>
+          <div id="metrics" class="mt-2 grid grid-cols-2 gap-3">
+            <div>
+              <canvas id="requestsChart" height="140" aria-label="Requests Over Time" role="img"></canvas>
+            </div>
+            <div>
+              <canvas id="revenueChart" height="140" aria-label="Revenue Split" role="img"></canvas>
+            </div>
+          </div>
+          <div id="metricsFallback" class="hidden text-sm text-slate-500">Charts unavailable. Basic metrics will appear here.</div>
+        </div>
+
+        <div class="rounded-xl shadow-lg p-5 border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold">🌐 Providers</h2>
+            <div class="flex gap-2">
+              <button id="sortProvidersByPrice" class="px-3 py-1 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xs">Sort by Price</button>
+              <button id="sortProvidersByRep" class="px-3 py-1 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-xs">Sort by Rep</button>
+            </div>
+          </div>
+          <div id="providersWrap" class="mt-2 overflow-x-auto">
+            <table class="w-full text-sm text-slate-800 dark:text-slate-100" aria-label="Providers Table">
+              <thead class="border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th class="px-3 py-2 text-left">Name</th>
+                  <th class="px-3 py-2 text-left">Type</th>
+                  <th class="px-3 py-2 text-left">Price×</th>
+                  <th class="px-3 py-2 text-left">Reputation</th>
+                </tr>
+              </thead>
+              <tbody id="providersTable"></tbody>
+            </table>
+          </div>
+          <div id="providersEmpty" class="hidden text-sm text-slate-500">No providers found</div>
+        </div>
+      </section>
+
+      <!-- Agent Simulator -->
+      <section class="rounded-xl shadow-lg p-5 border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900 xl:col-span-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-semibold">🤖 Agent Simulator</h2>
+          <button id="runAgent" class="inline-flex items-center justify-center rounded-lg bg-indigo-600 text-white px-4 py-2 font-semibold shadow hover:bg-indigo-500 active:scale-[.98] transition">
+            <span class="inline-flex items-center gap-2"><span class="spinner hidden" id="agentSpin"></span> Run</span>
+          </button>
+        </div>
+        <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+          <input id="agentInput" aria-label="Agent Query" class="md:col-span-2 rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2" placeholder="Analyze address Hc...X: summarize activity and fees" />
+          <select id="agentDepth" class="rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2">
+            <option value="1">Shallow</option>
+            <option value="2" selected>Medium</option>
+            <option value="3">Deep</option>
+          </select>
+        </div>
+        <div id="agentSteps" class="mt-3 space-y-2" aria-live="polite"></div>
+        <div id="agentResult" class="mt-3 hidden">
+          <details class="rounded-xl shadow-lg p-4 border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <summary class="cursor-pointer text-sm font-semibold">Agent Output</summary>
+            <pre id="agentOutput" class="mt-2 whitespace-pre-wrap text-xs"></pre>
+          </details>
+        </div>
+      </section>
+    </main>
   </div>
 
   <!-- Payment Modal -->
-  <div id="paymentModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>💳 Payment Required</h3>
-        <span class="close" onclick="closePaymentModal()">×</span>
+  <div id="paymentModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="paymentTitle">
+    <div class="modal-content rounded-xl shadow-lg p-5 border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900">
+      <div class="flex items-center justify-between">
+        <h3 id="paymentTitle" class="text-lg font-semibold">💳 Payment Required</h3>
+        <button class="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition" id="paymentClose" aria-label="Close payment modal">✕</button>
       </div>
-      <div id="modalWalletStatus" style="text-align:center; padding:8px; background:#fff3cd; border-radius:6px; margin-bottom:8px;">
+      <div id="modalWalletStatus" class="mt-2 inline-flex items-center rounded-md px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300">
         <span id="modalWalletText">Connect wallet to process payment</span>
       </div>
-      <div class="payment-details">
-        <div class="row"><span>Amount</span><span id="paymentAmount">-</span></div>
-        <div class="row"><span>Asset</span><span id="paymentAsset">-</span></div>
-        <div class="row"><span>Recipient</span><span id="paymentAddress" style="font-size:10px; word-break:break-all;">-</span></div>
-        <div class="row"><span>Payment ID</span><span id="paymentId" style="font-size:10px; word-break:break-all;">-</span></div>
-        <div class="row"><span>Method</span><span id="paymentMethod">-</span></div>
+      <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+        <div class="p-2 rounded-lg bg-slate-50 dark:bg-slate-800">
+          <div class="flex justify-between"><span>Amount</span><span id="paymentAmount">-</span></div>
+          <div class="flex justify-between"><span>Asset</span><span id="paymentAsset">-</span></div>
+          <div class="flex justify-between"><span>Method</span><span id="paymentMethod">-</span></div>
+        </div>
+        <div class="p-2 rounded-lg bg-slate-50 dark:bg-slate-800">
+          <div class="flex justify-between"><span>Recipient</span><span id="paymentAddress" class="text-[10px] break-all">-</span></div>
+          <div class="flex justify-between"><span>Payment ID</span><span id="paymentId" class="text-[10px] break-all">-</span></div>
+        </div>
       </div>
-      <div id="paymentProgress" style="display:none; padding:8px; background:#d1ecf1; color:#0c5460; border-radius:6px; margin-bottom:8px;">Processing payment...</div>
-      <div style="display:flex; gap:8px;">
-        <button class="btn-secondary" onclick="closePaymentModal()" style="flex:1;">Cancel</button>
-        <button id="payButton" onclick="processPayment()" style="flex:1;">Pay with Phantom</button>
+      <div class="mt-3 space-y-2" aria-label="Payment Progress">
+        <div class="step" id="step-connect"><span class="step-dot"></span><span>Connecting Wallet</span></div>
+        <div class="step" id="step-sign"><span class="step-dot"></span><span>Signing</span></div>
+        <div class="step" id="step-confirm"><span class="step-dot"></span><span>Confirming</span></div>
+        <div class="step" id="step-retry"><span class="step-dot"></span><span>Retrying Request</span></div>
       </div>
-      <div style="margin-top:10px; font-size:12px; color:#6b7280;">
-        CLI alternative: <code>node examples/client.js</code>
+      <div id="paymentProgress" class="hidden mt-2 text-sm text-indigo-700 dark:text-indigo-300">Processing payment...</div>
+      <div class="mt-3 flex gap-2">
+        <button class="inline-flex items-center justify-center rounded-lg bg-slate-600 text-white px-3 py-2 font-semibold shadow hover:bg-slate-500 active:scale-[.98] transition" id="paymentCancel">Cancel</button>
+        <button id="payButton" class="inline-flex items-center justify-center rounded-lg bg-indigo-600 text-white px-4 py-2 font-semibold shadow hover:bg-indigo-500 active:scale-[.98] transition">Pay with Phantom</button>
       </div>
+      <p class="mt-2 text-xs text-slate-500">Dev tip: <code>node examples/client.js</code></p>
     </div>
   </div>
 
   <script>
-    // Wallet and RPC state
-    let wallet = null; let connection = null; let pendingPayment = null; let pendingRequest = null; let splToken = null;
+    // Wallet + RPC state are shared with /ui.js via window.UIState
     const DEVNET_RPC = 'https://api.devnet.solana.com';
     const USDC_MINT = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
-
-    window.addEventListener('load', function(){
-      connection = new solanaWeb3.Connection(DEVNET_RPC, 'confirmed');
-      splToken = window.splToken || window.solanaToken || null;
-      checkWalletConnection();
-      loadMetrics(); loadProviders();
-      setInterval(loadMetrics, 10000);
-    });
-
-    function checkWalletConnection(){
-      if (window.solana && window.solana.isPhantom){
-        window.solana.on('connect', updateWalletUI);
-        window.solana.on('disconnect', updateWalletUI);
-        if (window.solana.isConnected) { wallet = window.solana; }
-        updateWalletUI();
-      } else {
-        document.getElementById('walletText').textContent = '⚠️ Phantom wallet not detected';
-        const btn = document.getElementById('connectWallet');
-        btn.textContent = 'Install Phantom';
-        btn.onclick = function(){ window.open('https://phantom.app/', '_blank'); };
-      }
-    }
-
-    async function connectWallet(){
-      try { if (!window.solana) { alert('Install Phantom from phantom.app'); return; }
-        await window.solana.connect(); wallet = window.solana; updateWalletUI();
-      } catch(e){ alert('Failed to connect wallet: ' + e.message); }
-    }
-
-    function updateWalletUI(){
-      const statusDiv = document.getElementById('walletStatus');
-      const text = document.getElementById('walletText');
-      const btn = document.getElementById('connectWallet');
-      if (wallet && wallet.isConnected){
-        const addr = wallet.publicKey.toString();
-        text.textContent = '✅ Wallet: ' + addr.slice(0,8) + '...' + addr.slice(-8);
-        btn.textContent = 'Disconnect';
-        btn.onclick = function(){ wallet.disconnect(); };
-        statusDiv.style.background = '#d4edda';
-      } else {
-        text.textContent = '🦊 Wallet: Not connected';
-        btn.textContent = 'Connect Phantom';
-        btn.onclick = connectWallet;
-        statusDiv.style.background = '#fff3cd';
-      }
-    }
-
-    function showPaymentModal(resp402, method, params){
-      if (!resp402 || !resp402.accepts || !resp402.accepts[0]) { alert('Invalid payment response'); return; }
-      const p = resp402.accepts[0];
-      pendingPayment = p; pendingRequest = { method: method, params: params };
-      document.getElementById('paymentAmount').textContent = (p.amount||'N/A') + ' ' + (p.asset||'USDC');
-      document.getElementById('paymentAsset').textContent = (p.asset||'USDC') + ' (' + (p.chain||'solana-devnet') + ')';
-      document.getElementById('paymentAddress').textContent = p.paymentAddress || 'N/A';
-      document.getElementById('paymentId').textContent = p.paymentId || 'N/A';
-      document.getElementById('paymentMethod').textContent = p.method || method || 'unknown';
-      var modal = document.getElementById('paymentModal'); modal.style.display='block';
-    }
-
-    function closePaymentModal(){
-      var modal = document.getElementById('paymentModal'); modal.style.display='none';
-      var pp = document.getElementById('paymentProgress'); pp.style.display='none';
-      var btn = document.getElementById('payButton'); btn.disabled=false; btn.textContent='Pay with Phantom';
-      pendingPayment = null; pendingRequest = null;
-    }
-
-    async function processPayment(){
-      if (!(wallet && wallet.isConnected)) { alert('Connect your wallet first'); return; }
-      if (!pendingPayment || !pendingRequest) { alert('No pending payment'); return; }
-      if (typeof Buffer === 'undefined') { alert('Buffer not available. Use CLI if issue persists.'); return; }
-      if (!splToken) { alert('SPL Token library not loaded'); return; }
-      var progress = document.getElementById('paymentProgress'); var payBtn = document.getElementById('payButton');
-      try {
-        progress.style.display='block'; progress.style.background='#d1ecf1'; progress.textContent='Processing payment...';
-        payBtn.disabled = true; payBtn.textContent='Processing...';
-
-        const usdcMint = new solanaWeb3.PublicKey(USDC_MINT);
-        const recipient = new solanaWeb3.PublicKey(pendingPayment.paymentAddress);
-        const sender = wallet.publicKey;
-
-        const senderATA = await splToken.getAssociatedTokenAddress(usdcMint, sender);
-        const recipientATA = await splToken.getAssociatedTokenAddress(usdcMint, recipient);
-
-        const amount = Math.floor(parseFloat(pendingPayment.amount) * 1e6);
-
-        const acctInfo = await connection.getAccountInfo(senderATA);
-        if (!acctInfo) { throw new Error('You do not have a USDC token account yet.'); }
-        const bal = await connection.getTokenAccountBalance(senderATA);
-        const have = parseInt(bal.value.amount);
-        if (have < amount) { throw new Error('Insufficient USDC. Need ' + (amount/1e6).toFixed(6)); }
-
-        const tx = new solanaWeb3.Transaction().add(
-          splToken.createTransferInstruction(senderATA, recipientATA, sender, amount, [], splToken.TOKEN_PROGRAM_ID)
-        );
-        const bh = await connection.getLatestBlockhash(); tx.recentBlockhash = bh.blockhash; tx.feePayer = sender;
-
-        progress.textContent = 'Waiting for signature...';
-        const signed = await wallet.signTransaction(tx);
-        progress.textContent = 'Sending transaction...';
-        const sig = await connection.sendRawTransaction(signed.serialize());
-        progress.textContent = 'Confirming... ' + sig.slice(0,16) + '...';
-        await connection.confirmTransaction(sig, 'confirmed');
-
-        progress.textContent = 'Payment confirmed. Retrying request...';
-        await new Promise(function(r){ setTimeout(r, 1200); });
-        await retryWithPayment(sig, pendingPayment.paymentId);
-      } catch(e){
-        progress.style.background='#f8d7da'; progress.textContent = 'Payment failed: ' + e.message;
-        payBtn.disabled=false; payBtn.textContent='Retry Payment';
-      }
-    }
-
-    // Minimal render helpers
-    function renderResult(data){
-      var r = document.getElementById('queryResult');
-      if (r) { r.textContent = JSON.stringify(data, null, 2); }
-    }
-    function renderError(data){
-      var r = document.getElementById('queryResult');
-      if (r) { r.textContent = JSON.stringify(data, null, 2); }
-    }
-
-    async function retryWithPayment(txSignature, paymentId){
-      var progress = document.getElementById('paymentProgress');
-      try {
-        const proof = btoa(JSON.stringify({ txSignature: txSignature, paymentId: paymentId }));
-        const response = await fetch('/', { method:'POST', headers:{ 'Content-Type':'application/json', 'X-Payment': proof }, body: JSON.stringify({ jsonrpc:'2.0', id:1, method: pendingRequest.method, params: pendingRequest.params }) });
-        const data = await response.json();
-        if (response.ok){ renderResult(data); closePaymentModal(); }
-        else { renderError(data); }
-      } catch(e){ renderError({ error: { message: 'Retry failed: ' + e.message } }); }
-    }
-
-    function clearResult(){ document.getElementById('queryResult').textContent=''; }
-
-    async function loadMetrics(){
-      const el = document.getElementById('metrics'); el.innerHTML='<div class="loading">Loading...</div>';
-      try {
-        const r = await fetch('/metrics/json'); const d = await r.json();
-        el.innerHTML = ''
-          + '<div class="row"><b>Total Requests</b><span>' + (d.requests && d.requests.total || 0) + '</span></div>'
-          + '<div class="row"><b>Total Payments</b><span>' + (d.payments && d.payments.total || 0) + '</span></div>'
-          + '<div class="row"><b>Total Revenue</b><span>' + (d.revenue && d.revenue.total || 0) + ' USDC</span></div>'
-          + '<div class="row"><b>Gateway Share</b><span>' + (d.revenue && d.revenue.gateway || 0) + ' USDC</span></div>'
-          + '<div class="row"><b>Provider Share</b><span>' + (d.revenue && d.revenue.dataProvider || 0) + ' USDC</span></div>'
-          + '<div class="row"><b>Uptime</b><span>' + Math.floor((d.uptime||0)/60) + 'm ' + Math.floor((d.uptime||0)%60) + 's</span></div>';
-      } catch(e){ el.innerHTML = '<div class="result">Failed to load metrics</div>'; }
-    }
-
-    async function loadProviders(){
-      const el = document.getElementById('providers'); el.innerHTML = '<div class="loading">Loading...</div>';
-      try {
-        const r = await fetch('/providers'); const d = await r.json();
-        el.innerHTML = (d.providers||[]).map(function(p){
-          return '<div class="provider-card">'
-            + '<div style="font-weight:600; color:#4f46e5;">' + p.name + '</div>'
-            + '<div style="font-size:12px; color:#6b7280;">Type: ' + p.type + ' • Pricing: ' + p.pricing + 'x • Reputation: ' + p.reputation + '%</div>'
-          + '</div>';
-        }).join('');
-      } catch(e){ el.innerHTML = '<div class="result">Failed to load providers</div>'; }
-    }
-
-    document.getElementById('queryForm').addEventListener('submit', async function(e){
-      e.preventDefault();
-      const method = document.getElementById('method').value;
-      const paramsText = document.getElementById('params').value.trim();
-      const resultDiv = document.getElementById('queryResult');
-      var params = [];
-      if (paramsText){ try { params = JSON.parse(paramsText); } catch(_){ resultDiv.textContent='Invalid JSON parameters'; return; } }
-      resultDiv.innerHTML = '<div class="loading">Sending request...</div>';
-      try {
-        const response = await fetch('/', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ jsonrpc:'2.0', id:1, method: method, params: params }) });
-        const data = await response.json();
-        if (response.status === 402){ resultDiv.innerHTML = '<div class="result">Payment required - opening payment modal...</div>'; showPaymentModal(data, method, params); }
-        else if (response.ok){ resultDiv.textContent = JSON.stringify(data, null, 2); }
-        else { resultDiv.textContent = JSON.stringify(data, null, 2); }
-      } catch(e){ resultDiv.textContent = 'Request failed: ' + e.message; }
-    });
+    window.UIState = { wallet: null, connection: null, pendingPayment: null, pendingRequest: null, splToken: null, DEVNET_RPC, USDC_MINT };
   </script>
+  <!-- App UI logic (progressive enhancement) -->
+  <script defer src="/ui.js"></script>
 </body>
 </html>
   `;
