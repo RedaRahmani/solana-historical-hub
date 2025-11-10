@@ -90,6 +90,12 @@ app.get('/metrics/json', jsonMetricsHandler);
 // Web UI
 app.get('/ui', uiHandler);
 
+// Redirect root to the web UI so visiting / shows the UI immediately
+app.get('/', (req, res) => {
+  // Prefer a server-side redirect to keep URLs simple for users and bots
+  res.redirect('/ui');
+});
+
 // Provider marketplace endpoints
 app.get('/providers', listProvidersHandler);
 app.post('/providers/add', validateProvider, addProviderHandler);
