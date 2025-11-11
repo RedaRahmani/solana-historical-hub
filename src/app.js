@@ -48,6 +48,9 @@ function normalizeEnv() {
 normalizeEnv();
 
 const app = express();
+// Trust proxy headers (Vercel / reverse proxies set X-Forwarded-For)
+// This is required so express-rate-limit can correctly identify clients
+app.set('trust proxy', true);
 const PORT = process.env.PORT || 3000;
 
 // Security middleware
