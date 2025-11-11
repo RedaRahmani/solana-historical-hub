@@ -9,19 +9,15 @@
   "routes": [
       {
         "src": "^/ui$",
-        "dest": "/public/index.html"
+        "dest": "/index.html"
       },
       {
         "src": "^/$",
-        "dest": "/public/index.html"
+        "dest": "/index.html"
       },
       {
         "src": "^/(.*\\.(js|css|png|jpg|jpeg|svg|ico|map))$",
-        "dest": "/public/$1"
-      },
-      {
-        "src": "^/(metrics|providers|providers/.*|metrics/.*|api/.*|)$(.*)?",
-        "dest": "/api/index.js"
+        "dest": "/$1"
       },
       {
         "src": "^/(.*)$",
