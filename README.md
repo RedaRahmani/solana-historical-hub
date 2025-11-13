@@ -22,19 +22,6 @@ Fast, sustainable access to Solana’s historical data via x402 “Payment Requi
 
 ---
 
-## 🎥 Visuals (Devnet)
-
-> Replace with your own screenshots/GIFs if you fork this repo.
-
-- UI Hero (payment stepper + result viewer)  
-  ![UI Hero](docs/media/ui-hero.png)
-- Agent Demo (real 402 → pay → signatures table)  
-  ![Agent Demo](docs/media/agent-demo.gif)
-- CLI Output (full signatures + explorer links)  
-  ![CLI Table](docs/media/cli-table.png)
-
----
-
 ## ✅ What You Get
 
 - x402 payment flow end‑to‑end: 402 challenge, proof, on‑chain verification, settlement headers
